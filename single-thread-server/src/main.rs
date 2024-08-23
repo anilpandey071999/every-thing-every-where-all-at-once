@@ -1,5 +1,7 @@
 use std::{
-    fs, io::{BufRead, BufReader, Write}, net::{TcpListener, TcpStream}
+    fs,
+    io::{BufRead, BufReader, Write},
+    net::{TcpListener, TcpStream},
 };
 
 fn main() {
@@ -16,18 +18,28 @@ fn main() {
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
-    let http_request: Vec<_> = buf_reader
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
-    
-    let status_line = "HTTP/1.1 200 OK";
-    let contents = fs::read_to_string("hello.html").unwrap();
-    let length = contents.len();
+    let mut line_result = buf_reader.lines();
+    println!("{:#?}", line_result);
+    let request_line = line_result.next().unwrap().unwrap();
 
-    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+    if request_line == "GET / HTTP/1.1" {
+        let status_line = "HTTP/1.1 200 OK";
+        let contents = fs::read_to_string("hello.html").unwrap();
+        let length = contents.len();
 
-    println!("Request: {http_request:#?}");
-    stream.write_all(response.as_bytes()).unwrap();
+        let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+
+        println!("Request: {response:#?}");
+        stream.write_all(response.as_bytes()).unwrap();
+    }else {
+        let status_line = "HTTP/1.1 404 NOT FOUND";
+        let contents = fs::read_to_string("404.html").unwrap();
+        let length = contents.len();
+
+        let response = format!(
+            "{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"
+        );
+
+        stream.write_all(response.as_bytes()).unwrap();
+    }
 }
